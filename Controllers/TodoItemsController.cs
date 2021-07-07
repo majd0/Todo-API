@@ -15,7 +15,7 @@ namespace TodoApi.Controllers
     public class TodoItemsController : ControllerBase
     {
         private readonly TodoContext _context;
-        public readonly IMapper _mapper;
+        private readonly IMapper _mapper;
 
 
         public TodoItemsController(TodoContext context , IMapper mapper)
@@ -45,8 +45,9 @@ namespace TodoApi.Controllers
         public async Task<ActionResult<IEnumerable<TodoItemDTO>>> GetTodoItems()
         {
             //return await _context.TodoItems.ToListAsync();
-            return await _context.TodoItems.Select(x => ItemToDTO(x)).ToListAsync();
-
+            //return await _context.TodoItems.Select(x => ItemToDTO(x)).ToListAsync();
+            
+            return await _context.TodoItems.Select(x => _mapper.Map<TodoItem,TodoItemDTO>(x)).ToListAsync();
         }
 
         // GET: api/TodoItems/5
@@ -61,13 +62,13 @@ namespace TodoApi.Controllers
             }
 
             //return todoItem;
-            return ItemToDTO(todoItem);
+            //return ItemToDTO(todoItem);
+            return _mapper.Map<TodoItem, TodoItemDTO>(todoItem);
         }
 
         // PUT: api/TodoItems/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        //public async Task<IActionResult> PutTodoItem(long id, TodoItem todoItem)
         public async Task<IActionResult> PutTodoItem(long id, TodoItemDTO todoItemDTO)
         {
             if (id != todoItemDTO.Id)
@@ -80,9 +81,11 @@ namespace TodoApi.Controllers
             {
                 return NotFound();
             }
-
-            todoItem.Name = todoItemDTO.Name;
-            todoItem.IsComplete = todoItemDTO.IsComplete;
+            //var model = _mapper.Map<TodoItem>(todoItemDTO);
+            var model = _mapper.Map(todoItemDTO, todoItem);
+            //var model = _mapper.Map<TodoItem, TodoItemDTO>(todoItem);
+            //todoItem.Name = todoItemDTO.Name;
+            //todoItem.IsComplete = todoItemDTO.IsComplete;
 
             //_context.Entry(todoItem).State = EntityState.Modified;
 
@@ -95,7 +98,8 @@ namespace TodoApi.Controllers
                 return NotFound();
             }
 
-            return NoContent();
+            return Ok(model);
+            //return CreatedAtAction(nameof(GetTodoItem),model);
         }
 
         
@@ -105,22 +109,29 @@ namespace TodoApi.Controllers
         public async Task<ActionResult<TodoItemDTO>> PostTodoItem(TodoItemDTO todoItemDTO)
         {
 
-            var todoItem = new TodoItem
-            {
-                IsComplete = todoItemDTO.IsComplete,
-                Name = todoItemDTO.Name
-            };
+            //var todoItem = new TodoItem
+            //{
+            //    IsComplete = todoItemDTO.IsComplete,
+            //    Name = todoItemDTO.Name
+            //};
+            //var todoItem = await _context.TodoItems.ToListAsync();
+            
             //if (!ModelState.IsValid)
             //{
-            //    return new JsonResult("Error") { StatusCode = 500 };
+            //    return ;
             //}
+            var model = _mapper.Map<TodoItemDTO,TodoItem>(todoItemDTO);  // <source , destination> (object to map)
 
-            _context.TodoItems.Add(todoItem);
+            _context.TodoItems.Add(model);
             await _context.SaveChangesAsync();
+
+            todoItemDTO.Id = model.Id;
+            return todoItemDTO;
 
             //return CreatedAtAction("GetTodoItem", new { id = todoItem.Id }, todoItem);
             //return CreatedAtAction(nameof(GetTodoItem), new { id = todoItem.Id }, todoItem);
-            return CreatedAtAction(nameof(GetTodoItem), new { id = todoItem.Id }, ItemToDTO(todoItem));
+            //return CreatedAtAction(nameof(GetTodoItem), new { id = todoItem.Id }, ItemToDTO(todoItem));
+            return CreatedAtAction(nameof(GetTodoItem), new { id = model.Id }, ItemToDTO(model));
             
         }
 
